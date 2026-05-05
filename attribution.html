@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8"/>
+  <title>Notice — Pipeline d'Attribution Marketing Alterna</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      margin: 2em auto;
+      max-width: 860px;
+      padding: 0 1.5em;
+      color: rgb(55, 53, 47);
+      font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+      line-height: 1.6;
+      font-size: 16px;
+    }
+    h1 {
+      font-size: 2.2rem;
+      font-weight: 700;
+      margin-top: 0.5em;
+      margin-bottom: 0.75em;
+      letter-spacing: -0.01em;
+    }
+    h2 {
+      font-size: 1.4rem;
+      font-weight: 600;
+      margin-top: 2em;
+      margin-bottom: 0.4em;
+      letter-spacing: -0.01em;
+    }
+    h3 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-top: 1.5em;
+      margin-bottom: 0.3em;
+      letter-spacing: -0.01em;
+    }
+    p {
+      margin-top: 0.4em;
+      margin-bottom: 0.4em;
+    }
+    ul, ol {
+      margin: 0.4em 0;
+      padding-left: 1.7em;
+    }
+    li {
+      margin: 0.2em 0;
+      line-height: 1.6;
+    }
+    hr {
+      border: none;
+      border-bottom: 1px solid rgba(55, 53, 47, 0.15);
+      margin: 1.5em 0;
+    }
+    code {
+      background: rgba(135, 131, 120, 0.15);
+      border-radius: 3px;
+      padding: 0.15em 0.4em;
+      font-size: 85%;
+      color: #eb5757;
+      font-family: "SFMono-Regular", Menlo, Consolas, monospace;
+    }
+    strong {
+      font-weight: 600;
+    }
+    .page-icon {
+      font-size: 2.5rem;
+      margin-bottom: 0.3em;
+    }
+  </style>
+</head>
+<body>
+  <article>
+    <div class="page-icon">📊</div>
+    <h1>Notice — Pipeline d'Attribution Marketing Alterna</h1>
+
+    <h2>En résumé, que fait ce pipeline ?</h2>
+    <p>Ce pipeline reconstruit le <strong>parcours marketing complet</strong> de chaque visiteur qui finit par souscrire un contrat Alterna. L'objectif : identifier quelles campagnes publicitaires (Google, Meta, Bing…) ont contribué à la souscription, même si le visiteur est revenu plusieurs fois sur le site par des chemins différents avant de convertir.</p>
+
+    <hr/>
+
+    <h2>Le problème qu'on résout</h2>
+    <p>Un visiteur type ne souscrit pas en un seul clic. Il peut :</p>
+    <ol>
+      <li>Cliquer sur une pub Google "marque pure" un lundi</li>
+      <li>Revenir via une recherche naturelle (SEO) le mercredi</li>
+      <li>Revenir en tapant directement l'URL (trafic direct) le vendredi</li>
+      <li>Souscrire le vendredi</li>
+    </ol>
+    <p>Sans ce pipeline, Piano Analytics (notre outil de collecte) n'attribue la souscription qu'au <strong>dernier canal</strong> — ici "trafic direct". La pub Google qui a initié le parcours serait invisible. Ce pipeline corrige ça en reconstruisant tout le parcours.</p>
+
+    <hr/>
+
+    <h2>Comment ça fonctionne ?</h2>
+    <p>Le pipeline s'appuie sur une série de tables intermédiaires dans BigQuery, recalculées quotidiennement via Dataform. Voici ce qu'elles font, regroupées par grande fonction.</p>
+
+    <h3>1. Nettoyage et préparation des données brutes</h3>
+    <p>On récupère les données envoyées par Piano Analytics — visites, souscriptions, clics publicitaires — et on les nettoie en plusieurs passes :</p>
+    <ul>
+      <li><strong>Dédoublonnage technique</strong> : Piano peut envoyer plusieurs fois le même événement (rechargement de page, synchronisation…). On élimine les doublons exacts pour ne garder qu'un seul exemplaire.</li>
+      <li><strong>Exclusion des agents commerciaux</strong> : certains visiteurs sont en réalité des agents Alterna qui souscrivent pour le compte de clients. On les identifie (via le marqueur <code>funnel_expert</code> ou un seuil de 4+ souscriptions converties) et on neutralise leurs données marketing pour ne pas fausser l'analyse.</li>
+      <li><strong>Normalisation des sources</strong> : les noms de sources marketing sont harmonisés. Par exemple, si un <code>fbclid</code> (identifiant de clic Facebook) est présent mais la source est vide, on attribue "Facebook". Les pages blog sont identifiées, les visites converties normalisées.</li>
+    </ul>
+
+    <h3>2. Construction des touchpoints</h3>
+    <p>Chaque visite nettoyée est transformée en <strong>touchpoint marketing</strong> — un moment précis où un visiteur a été en contact avec un canal. Par exemple : "Le 15 mars à 14h32, le visiteur X a cliqué sur la campagne Google 'marque-pure'."</p>
+    <p>On crée deux visions complémentaires :</p>
+    <ul>
+      <li><strong>Par visite</strong> : les touchpoints rattachés à une session de navigation spécifique</li>
+      <li><strong>Par visiteur</strong> : les touchpoints rattachés à un individu, regroupant potentiellement plusieurs sessions sur la même journée</li>
+    </ul>
+    <p>Chaque touchpoint reçoit un identifiant unique stable pour éviter les doublons dans les étapes suivantes.</p>
+
+    <h3>3. Raccordement d'identité (Identity Stitching)</h3>
+    <p>C'est le cœur du pipeline. Un même visiteur peut interagir avec le site Alterna via différents appareils, navigateurs, ou sessions. Piano lui attribue à chaque fois un identifiant différent. Le raccordement d'identité consiste à <strong>relier ces identifiants entre eux</strong> pour reconstituer le parcours complet d'une seule personne.</p>
+    <p>On utilise quatre clés de raccordement, par ordre de fiabilité :</p>
+    <ol>
+      <li><strong>Email haché</strong> — le plus fiable, résiste au changement d'appareil</li>
+      <li><strong>Identifiant utilisateur</strong> — fiable, lié au compte connecté</li>
+      <li><strong>Identifiant visiteur</strong> — le cookie navigateur, limité à un seul navigateur</li>
+      <li><strong>Identifiant de visite</strong> — la session, le plus éphémère</li>
+    </ol>
+    <p>Pour chaque souscription, on collecte toutes les identités connues et on les utilise pour retrouver les touchpoints marketing associés, même ceux captés sur un autre appareil ou un autre navigateur.</p>
+
+    <h3>4. Attribution et flags de canal</h3>
+    <p>C'est l'étape finale qui alimente le dashboard Looker Studio. Pour chaque souscription, on regarde <strong>en arrière sur 30 jours</strong> quels canaux marketing ont été vus en combinant les touchpoints de visite ET de visiteur grâce aux identités résolues.</p>
+    <p>On obtient pour chaque souscription :</p>
+    <ul>
+      <li><strong>La source finale Piano</strong> : le dernier canal avant la souscription (ex : "Direct traffic")</li>
+      <li><strong>Les flags de canal</strong> : pour chaque canal (Google, Meta, Bing, SEO, Direct, Blog), est-ce qu'il est intervenu dans les 30 jours précédant la souscription ?</li>
+      <li><strong>Le nombre de visites par canal</strong> : combien de fois le visiteur a interagi avec chaque canal</li>
+      <li><strong>Le délai depuis le dernier contact</strong> : combien de jours entre le dernier touchpoint de ce canal et la souscription</li>
+      <li><strong>Le consentement</strong> : le visiteur avait-il consenti au tracking Google Ads / Meta Pixel ?</li>
+    </ul>
+    <p>C'est ce qui permet de dire : <strong>"Cette souscription attribuée au trafic direct a en fait été initiée par une campagne Google 5 jours plus tôt."</strong></p>
+
+    <hr/>
+
+    <h2>Concepts clés</h2>
+
+    <h3>Source finale vs. canal contributeur</h3>
+    <ul>
+      <li><strong>Source finale</strong> : le dernier canal vu par Piano au moment de la souscription (ex : "Direct traffic")</li>
+      <li><strong>Canal contributeur</strong> : un canal qui a participé au parcours sans être le dernier (ex : Google Ads 5 jours avant)</li>
+    </ul>
+    <p>Le dashboard montre les deux : la source finale que verrait Piano seul, et les canaux contributeurs identifiés par le pipeline d'attribution.</p>
+
+    <h3>Fenêtre d'attribution</h3>
+    <p>On regarde <strong>30 jours en arrière</strong> à partir de la date de souscription pour déterminer quels canaux ont contribué. Un touchpoint Google vu il y a 45 jours ne sera pas comptabilisé.</p>
+
+    <h3>Flag de canal ("Google dans le parcours")</h3>
+    <p>Un flag comme <strong>"Google dans le parcours = OUI"</strong> signifie qu'au moins un touchpoint Google a été identifié dans les 30 jours précédant la souscription, quelle que soit la source finale.</p>
+
+  </article>
+</body>
+</html>
