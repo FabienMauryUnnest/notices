@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8"/>
+  <title>Notice — Modèles d'Attribution Alterna</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      margin: 2em auto;
+      max-width: 860px;
+      padding: 0 1.5em;
+      color: rgb(55, 53, 47);
+      font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+      line-height: 1.6;
+      font-size: 16px;
+    }
+    h1 {
+      font-size: 2.2rem;
+      font-weight: 700;
+      margin-top: 0.5em;
+      margin-bottom: 0.75em;
+      letter-spacing: -0.01em;
+    }
+    h2 {
+      font-size: 1.4rem;
+      font-weight: 600;
+      margin-top: 2em;
+      margin-bottom: 0.4em;
+      letter-spacing: -0.01em;
+    }
+    h3 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-top: 1.5em;
+      margin-bottom: 0.3em;
+      letter-spacing: -0.01em;
+    }
+    p {
+      margin-top: 0.4em;
+      margin-bottom: 0.4em;
+    }
+    ul, ol {
+      margin: 0.4em 0;
+      padding-left: 1.7em;
+    }
+    li {
+      margin: 0.2em 0;
+      line-height: 1.6;
+    }
+    hr {
+      border: none;
+      border-bottom: 1px solid rgba(55, 53, 47, 0.15);
+      margin: 1.5em 0;
+    }
+    code {
+      background: rgba(135, 131, 120, 0.15);
+      border-radius: 3px;
+      padding: 0.15em 0.4em;
+      font-size: 85%;
+      color: #eb5757;
+      font-family: "SFMono-Regular", Menlo, Consolas, monospace;
+    }
+    strong {
+      font-weight: 600;
+    }
+    .page-icon {
+      font-size: 2.5rem;
+      margin-bottom: 0.3em;
+    }
+
+    /* Table */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1em 0;
+      font-size: 15px;
+    }
+    th {
+      background: rgba(55, 53, 47, 0.05);
+      font-weight: 600;
+      text-align: left;
+      padding: 8px 12px;
+      border: 1px solid rgba(55, 53, 47, 0.12);
+    }
+    td {
+      padding: 7px 12px;
+      border: 1px solid rgba(55, 53, 47, 0.12);
+      vertical-align: top;
+    }
+    tr:nth-child(even) td {
+      background: rgba(55, 53, 47, 0.02);
+    }
+
+    /* Callout */
+    .callout {
+      background: rgba(35, 131, 226, 0.07);
+      border-left: 3px solid rgba(35, 131, 226, 0.5);
+      border-radius: 4px;
+      padding: 0.85em 1.1em;
+      margin: 1em 0;
+      font-size: 15px;
+    }
+    .callout p:first-child {
+      margin-top: 0;
+    }
+    .callout p:last-child {
+      margin-bottom: 0;
+    }
+
+    /* Pill badge */
+    .badge {
+      display: inline-block;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 100px;
+      background: rgba(55, 53, 47, 0.08);
+      color: rgb(55, 53, 47);
+      vertical-align: middle;
+      margin-left: 4px;
+    }
+    .badge.new {
+      background: rgba(22, 163, 74, 0.12);
+      color: #166534;
+    }
+    .badge.existing {
+      background: rgba(147, 51, 234, 0.1);
+      color: #6b21a8;
+    }
+  </style>
+</head>
+<body>
+  <article>
+    <div class="page-icon">⚖️</div>
+    <h1>Notice — Modèles d'Attribution Alterna</h1>
+
+    <h2>En résumé, qu'est-ce que les modèles d'attribution ?</h2>
+    <p>Le pipeline d'attribution reconstruit les parcours marketing des visiteurs avant chaque souscription (voir la <a href="./attribution.html">notice principale</a>). La question que posent les modèles d'attribution est la suivante : lorsque <strong>plusieurs canaux ont contribué</strong> à une souscription, comment répartir le "crédit" entre eux ?</p>
+    <p>Par exemple, si un visiteur a cliqué sur Google Ads 5 jours avant de souscrire, puis est passé par SEO la veille, combien de "valeur" attribuer à Google Ads et combien à SEO ? La réponse dépend du modèle choisi — et chaque modèle raconte une histoire différente.</p>
+    <p>Cette notice documente les <strong>5 modèles implémentés</strong>, les tables BigQuery correspondantes, et les cas d'usage de chacun.</p>
+
+    <hr/>
+
+    <h2>Le problème qu'on résout</h2>
+    <p>Jusqu'ici, le pipeline ne produisait qu'un seul type de contribution : le modèle <strong>participation</strong> (ou "présence dans le parcours"). Chaque canal présent dans les 30 jours obtenait une contribution de 1 — peu importe s'il avait initié le parcours ou juste effleuré la conversion.</p>
+    <p>Ce modèle est utile pour auditer la couverture des canaux, mais il ne permet pas de comparer les leviers ni de piloter les investissements de façon fine. Si Google Ads apparaît dans 60 % des parcours et Direct dans 70 %, est-ce que Google Ads "vaut" autant que Direct ? Le modèle participation seul ne répond pas à cette question.</p>
+    <p>Les nouveaux modèles permettent de répondre à des questions comme :</p>
+    <ul>
+      <li>Quel canal <strong>initie</strong> le plus souvent les parcours ? (First touch)</li>
+      <li>Quel canal <strong>convertit</strong> le plus ? (Last touch)</li>
+      <li>Si on répartit le crédit <strong>équitablement</strong> entre tous les canaux, qui ressort ? (Linéaire)</li>
+      <li>Quelle est la contribution "pondérée" en valorisant plus le premier et le dernier contact ? (Position-based)</li>
+    </ul>
+
+    <hr/>
+
+    <h2>Les 5 modèles implémentés</h2>
+
+    <h3>1. Participation <span class="badge existing">Modèle d'origine</span></h3>
+    <p>Chaque canal présent dans les 30 jours précédant la souscription reçoit un poids de <strong>1.0</strong>, quel que soit son rang dans le parcours.</p>
+    <p><strong>Usage :</strong> auditer la "présence" des canaux — est-ce que Google Ads est dans le parcours, oui ou non ? Il est conservé dans les nouvelles tables pour permettre la comparaison avec les autres modèles.</p>
+    <p><strong>Limite :</strong> la somme des poids par souscription n'est pas normalisée à 1 (si 3 canaux sont présents, la somme = 3). Ce n'est pas un modèle de répartition, c'est un modèle de détection.</p>
+
+    <h3>2. Linéaire <span class="badge new">Nouveau</span></h3>
+    <p>Le crédit est réparti <strong>équitablement</strong> entre tous les canaux du parcours : chaque canal reçoit un poids de <code>1/N</code>, où N est le nombre de canaux distincts.</p>
+    <p><strong>Exemple :</strong> 3 canaux dans le parcours (Google, SEO, Direct) → chacun reçoit 0,33. La somme des poids est toujours égale à 1.</p>
+    <p><strong>Usage :</strong> vision neutre et équilibrée — utile pour détecter les canaux qui accompagnent régulièrement les conversions sans forcément les initier ni les conclure.</p>
+
+    <h3>3. Linéaire sans Direct <span class="badge new">Nouveau</span></h3>
+    <p>Identique au linéaire, mais le canal <strong>Direct</strong> est exclu du calcul — sauf s'il est le seul canal présent dans le parcours, auquel cas il reçoit 1.0.</p>
+    <p><strong>Pourquoi ?</strong> Le trafic Direct est souvent une visite de retour d'un utilisateur qui connaît déjà la marque. L'exclure permet de donner plus de crédit aux canaux d'acquisition réels.</p>
+    <p><strong>Usage :</strong> comparer les performances des canaux payants et organiques, sans que Direct "dilue" leur contribution.</p>
+
+    <h3>4. First Touch <span class="badge new">Nouveau</span></h3>
+    <p>Le <strong>premier canal</strong> chronologiquement dans les 30 jours reçoit un poids de <strong>1.0</strong>. Tous les autres canaux reçoivent 0.</p>
+    <p><strong>Usage :</strong> identifier les canaux d'<strong>acquisition</strong> — ceux qui initialisent les parcours et créent la première prise de conscience. Particulièrement pertinent pour évaluer les campagnes de notoriété (display, YouTube, Meta) qui touchent les utilisateurs tôt dans le funnel.</p>
+
+    <h3>5. Last Touch <span class="badge new">Nouveau</span></h3>
+    <p>Le <strong>dernier canal</strong> avant la souscription reçoit un poids de <strong>1.0</strong>. Tous les autres reçoivent 0.</p>
+    <p><strong>Usage :</strong> identifier les canaux de <strong>conversion</strong> — ceux qui "closent" la souscription. C'est le modèle par défaut de la plupart des outils publicitaires (Piano, Google Ads). Le comparer au linéaire ou au first touch permet de détecter les biais d'attribution des plateformes.</p>
+
+    <h3>6. Position-based (U-shape) <span class="badge new">Nouveau</span></h3>
+    <p>Ce modèle valorise davantage le <strong>premier</strong> et le <strong>dernier</strong> point de contact, et répartit le reste sur les canaux intermédiaires — selon le tableau suivant :</p>
+    <table>
+      <thead>
+        <tr>
+          <th>Nombre de canaux (N)</th>
+          <th>Logique de répartition</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>N = 1</td>
+          <td>Le seul canal reçoit 1.0</td>
+        </tr>
+        <tr>
+          <td>N = 2</td>
+          <td>0.5 / 0.5 (premier et dernier)</td>
+        </tr>
+        <tr>
+          <td>N ≥ 3</td>
+          <td>40% au premier, 40% au dernier, 20% répartis équitablement entre les intermédiaires</td>
+        </tr>
+        <tr>
+          <td>N ≥ 3, premier = dernier canal</td>
+          <td>80% à ce canal, 20% aux intermédiaires (cas particulier corrigé)</td>
+        </tr>
+      </tbody>
+    </table>
+    <p><strong>Usage :</strong> compromis entre first touch et last touch — reconnaît l'importance du canal initiateur et du canal convertisseur sans ignorer les canaux intermédiaires. Souvent considéré comme le modèle le plus "réaliste" pour des cycles de vente multi-touch.</p>
+
+
+    <hr/>
+
+    <h2>Périmètre et règles communes aux modèles</h2>
+    <ul>
+      <li><strong>Fenêtre d'attribution :</strong> 30 jours glissants avant la souscription — identique au pipeline principal</li>
+      <li><strong>Canaux couverts :</strong> Google Ads, Meta, Bing Ads, SEO, Direct, Blog — détection par les mêmes règles que <code>mart_alterna_attribution_funnel</code></li>
+      <li><strong>Agents commerciaux exclus :</strong> les souscriptions identifiées comme agents (<code>source = 'agent'</code>) sont retirées de toutes les tables de modèles</li>
+      <li><strong>Intégrité vérifiée :</strong> pour les modèles linéaire, linéaire sans direct, first touch, last touch et position-based, la somme des poids par souscription est toujours égale à 1.0 — validé sur 28 002 souscriptions en QA</li>
+    </ul>
+
+    <hr/>
+
+    <h2>Comment lire les résultats dans Looker Studio</h2>
+    <p>Le dashboard expose un filtre <strong>modèle d'attribution</strong> permettant de basculer entre les 5 modèles, et un filtre <strong>type d'énergie</strong> (all / élec / gaz).</p>
+    <p>Quelques lectures types :</p>
+    <ul>
+      <li><strong>First touch élevé + Last touch faible pour Google Ads :</strong> Google initie beaucoup de parcours mais d'autres canaux "closent" → Google est un canal de notoriété, pas de conversion.</li>
+      <li><strong>Direct très fort en Last touch, faible en First touch :</strong> les visiteurs reviennent directement pour souscrire — la marque est connue, mais quelque chose d'autre a initié le parcours.</li>
+      <li><strong>Linéaire proche du Position-based :</strong> les parcours sont souvent courts (1 ou 2 canaux) — l'effet "U-shape" n'a pas beaucoup d'impact.</li>
+      <li><strong>Écart Linéaire vs Linéaire sans Direct :</strong> mesure l'importance du trafic direct dans les parcours. Un écart élevé signifie que Direct est souvent présent comme canal intermédiaire.</li>
+    </ul>
+
+  </article>
+</body>
+</html>
